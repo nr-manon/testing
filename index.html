@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Les Adjoints au Maire</title>
+<style>
+  /* ── CONFIG : modifiez ici le chemin CSV et le nom de la commune ── */
+  :root {
+    --csv-path: "adjoints.csv";          /* chemin relatif au HTML */
+    --commune:  "Ville de l'Exemple";
+    --accent:   #c8102e;                 /* rouge institutionnel    */
+    --ink:      #111111;
+    --muted:    #6b6b6b;
+    --border:   #e2e2e2;
+    --bg:       #f7f6f3;
+    --card-bg:  #ffffff;
+    --radius:   2px;
+    --font:     'DM Sans', 'Helvetica Neue', Arial, sans-serif;
+  }
+
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── HEADER ─────────────────────────────────────────────────────── */
+  header {
+    background: var(--ink);
+    color: #fff;
+    padding: 0 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border-bottom: 3px solid var(--accent);
+    min-height: 56px;
+    flex-wrap: wrap;
+  }
+  .header-rule {
+    width: 3px;
+    height: 24px;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+  header h1 {
+    font-size: .8rem;
+    font-weight: 600;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: #fff;
+    line-height: 1.2;
+  }
+  header p {
+    font-size: .72rem;
+    color: rgba(255,255,255,.5);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+  .header-text { flex: 1; }
+
+  /* ── GRID ────────────────────────────────────────────────────────── */
+  main {
+    padding: 1.25rem;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: .75rem;
+  }
+
+  @media (max-width: 900px)  { .grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 620px)  { .grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 380px)  { .grid { grid-template-columns: 1fr; } }
+
+  /* ── CARD ────────────────────────────────────────────────────────── */
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    cursor: pointer;
+    transition: box-shadow .15s, transform .15s;
+  }
+  .card:hover {
+    box-shadow: 0 4px 18px rgba(0,0,0,.09);
+    transform: translateY(-2px);
+  }
+  .card.open {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+
+  .card-top {
+    display: flex;
+    align-items: center;
+    gap: .7rem;
+    padding: .75rem;
+  }
+
+  /* avatar SVG icon */
+  .avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #eee;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 2px solid var(--border);
+    position: relative;
+  }
+  .avatar svg { width: 26px; height: 26px; }
+  .avatar .num {
+    position: absolute;
+    bottom: -1px;
+    right: -1px;
+    background: var(--accent);
+    color: #fff;
+    font-size: .52rem;
+    font-weight: 700;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid #fff;
+  }
+
+  .card-meta { flex: 1; min-width: 0; }
+  .card-name {
+    font-size: .82rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--ink);
+  }
+  .card-delegation {
+    font-size: .68rem;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: .1rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+
+  .toggle-icon {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background .15s, border-color .15s;
+  }
+  .card.open .toggle-icon { background: var(--accent); border-color: var(--accent); }
+  .toggle-icon svg { width: 9px; height: 9px; transition: transform .2s; }
+  .card.open .toggle-icon svg { transform: rotate(180deg); }
+  .toggle-icon svg path { stroke: var(--muted); stroke-width: 2; fill: none; }
+  .card.open .toggle-icon svg path { stroke: #fff; }
+
+  /* ── DRAWER ──────────────────────────────────────────────────────── */
+  .drawer {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height .28s cubic-bezier(.4,0,.2,1);
+    border-top: 0px solid var(--border);
+  }
+  .card.open .drawer {
+    max-height: 400px;
+    border-top: 1px solid var(--border);
+  }
+  .drawer-inner { padding: .75rem; display: flex; flex-direction: column; gap: .6rem; }
+
+  .drawer-section-label {
+    font-size: .6rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: .15rem;
+  }
+
+  .bio-text {
+    font-size: .74rem;
+    color: #333;
+    line-height: 1.6;
+  }
+
+  .tag-list { display: flex; flex-wrap: wrap; gap: .25rem; }
+  .tag {
+    font-size: .64rem;
+    background: #f0f0ee;
+    color: var(--ink);
+    padding: .15rem .4rem;
+    border-radius: 1px;
+    font-weight: 500;
+  }
+
+  .contact-line {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    font-size: .73rem;
+    color: #333;
+  }
+  .contact-line svg { width: 13px; height: 13px; flex-shrink: 0; color: var(--muted); }
+  .contact-line a { color: var(--ink); text-decoration: none; word-break: break-all; }
+  .contact-line a:hover { color: var(--accent); }
+
+  /* ── LOADING / ERROR ─────────────────────────────────────────────── */
+  #status {
+    text-align: center;
+    padding: 2rem;
+    font-size: .8rem;
+    color: var(--muted);
+    letter-spacing: .05em;
+  }
+  #status.error { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-rule"></div>
+  <div class="header-text">
+    <h1 id="commune-title">Les Adjoints au Maire</h1>
+    <p id="commune-name">Chargement…</p>
+  </div>
+</header>
+
+<main>
+  <div id="status">Chargement des données…</div>
+  <div class="grid" id="grid" aria-live="polite"></div>
+</main>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   CONFIG — modifiable également en dehors du script
+   ══════════════════════════════════════════════════════════════ */
+const CSV_PATH   = "adjoints.csv";   // ← chemin vers votre CSV
+const COMMUNE    = "Ville de l'Exemple"; // ← nom de la commune
+
+/* ══════════════════════════════════════════════════════════════
+   UTILITAIRES
+   ══════════════════════════════════════════════════════════════ */
+function parseCSV(text) {
+  const lines  = text.trim().split(/\r?\n/);
+  const header = splitLine(lines[0]);
+  return lines.slice(1).map(l => {
+    const vals = splitLine(l);
+    const obj  = {};
+    header.forEach((h, i) => { obj[h.trim()] = (vals[i] || "").trim(); });
+    return obj;
+  });
+}
+
+// Splits a CSV line respecting quoted fields
+function splitLine(line) {
+  const result = [];
+  let cur = "", inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { inQ = !inQ; continue; }
+    if (c === ',' && !inQ) { result.push(cur); cur = ""; continue; }
+    cur += c;
+  }
+  result.push(cur);
+  return result;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   ICÔNES SVG INLINE (zéro dépendance)
+   ══════════════════════════════════════════════════════════════ */
+const iconPerson = `<svg viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>`;
+const iconChevron = `<svg viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const iconMail = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="14" height="10" rx="1.5"/><path d="M1 5l7 5 7-5"/></svg>`;
+const iconPhone = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2h3l1.5 3.5-1.75 1.25C6.5 8.5 7.5 9.5 9.25 10.25L10.5 8.5 14 10v3c0 .5-.5 1-1 1C5.5 14 2 8.5 2 3c0-.5.5-1 1-1z"/></svg>`;
+const iconCalendar = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="14" height="11" rx="1.5"/><path d="M1 7h14M5 1v4M11 1v4"/></svg>`;
+
+/* ══════════════════════════════════════════════════════════════
+   RENDU
+   ══════════════════════════════════════════════════════════════ */
+function buildCard(d) {
+  const card = document.createElement('article');
+  card.className = 'card';
+  card.setAttribute('aria-expanded', 'false');
+
+  // Délégations : séparées par « & » pour affichage compact
+  const delegShort = d.delegation.split(/[,;]/)[0].trim();
+  const delegTags  = d.delegation.split(/[,;]/).map(s => s.trim()).filter(Boolean);
+
+  card.innerHTML = `
+    <div class="card-top" role="button" tabindex="0" aria-label="Voir la fiche de ${d.prenom} ${d.nom}">
+      <div class="avatar">
+        ${iconPerson}
+        <span class="num">${d.numero}</span>
+      </div>
+      <div class="card-meta">
+        <div class="card-name">${d.prenom} ${d.nom}</div>
+        <div class="card-delegation" title="${d.delegation}">${delegShort}</div>
+      </div>
+      <div class="toggle-icon" aria-hidden="true">${iconChevron}</div>
+    </div>
+    <div class="drawer" role="region" aria-label="Fiche de ${d.prenom} ${d.nom}">
+      <div class="drawer-inner">
+        <div>
+          <div class="drawer-section-label">Biographie</div>
+          <p class="bio-text">${d.bio || "–"}</p>
+        </div>
+        <div>
+          <div class="drawer-section-label">Délégations</div>
+          <div class="tag-list">${delegTags.map(t => `<span class="tag">${t}</span>`).join('')}</div>
+        </div>
+        <div>
+          <div class="drawer-section-label">Contact</div>
+          <div class="contact-line">${iconMail}<a href="mailto:${d.email}">${d.email}</a></div>
+          <div class="contact-line" style="margin-top:.3rem">${iconPhone}<span>${d.telephone}</span></div>
+          ${d.permanences ? `<div class="contact-line" style="margin-top:.3rem">${iconCalendar}<span>${d.permanences}</span></div>` : ''}
+        </div>
+      </div>
+    </div>`;
+
+  const top = card.querySelector('.card-top');
+  const toggle = () => {
+    const open = card.classList.toggle('open');
+    card.setAttribute('aria-expanded', open);
+  };
+  top.addEventListener('click', toggle);
+  top.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+
+  return card;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   INITIALISATION
+   ══════════════════════════════════════════════════════════════ */
+document.getElementById('commune-name').textContent = COMMUNE;
+
+fetch(CSV_PATH)
+  .then(r => {
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return r.text();
+  })
+  .then(text => {
+    const data  = parseCSV(text);
+    const grid  = document.getElementById('grid');
+    const status = document.getElementById('status');
+    status.style.display = 'none';
+    data.forEach(d => grid.appendChild(buildCard(d)));
+  })
+  .catch(err => {
+    const status = document.getElementById('status');
+    status.className = 'error';
+    status.textContent = `Impossible de charger le fichier CSV (${err.message}). Vérifiez que adjoints.csv est dans le même dossier que ce fichier HTML.`;
+    console.error(err);
+  });
+</script>
+</body>
+</html>
